@@ -1,0 +1,28 @@
+{
+    "name": "ballpit",
+    "version": "1.0.0",
+    "description": "> ball pits are cool",
+    "main": "index.js",
+    "scripts": {
+        "build": "webpack"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/cursorsdottsx/ballpit.git"
+    },
+    "keywords": [],
+    "author": "im-lonely <cursors.dev@gmail.com>",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/cursorsdottsx/ballpit/issues"
+    },
+    "homepage": "https://github.com/cursorsdottsx/ballpit#readme",
+    "devDependencies": {
+        "ts-loader": "^9.2.3",
+        "tslib": "^2.3.0",
+        "typescript": "^4.3.5",
+        "webpack": "^5.44.0",
+        "webpack-cli": "^4.7.2"
+    },
+    "dependencies": {}
+}
