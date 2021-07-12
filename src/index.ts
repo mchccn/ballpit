@@ -10,11 +10,13 @@ const originalWidth = canvas.width;
 
 rescale();
 
-ctx.fillStyle = "white";
+ctx.fillStyle = ctx.strokeStyle = "white";
 
-const GRAVITY = 15;
-const DAMPING = 0.9;
+const GRAVITY = 10;
+const DAMPING = 0.8;
 const RADIUS = 10;
+const RESTITUTION = 1;
+const EPOCH = Date.now();
 
 class Ball {
     public pos: Vector;
@@ -82,16 +84,30 @@ class Ball {
     }
 
     public static resolve(a: Ball, b: Ball) {
-        // ! DOESNT WORK HELP ME PLS
+        const delta = a.pos.clone().subtract(b.pos);
 
-        const A_RATIO = a.mass / b.mass;
-        const B_RATIO = b.mass / a.mass;
+        const d = delta.magnitude;
 
-        const A_DAMPING_RATIO = Ball.damper(a);
-        const B_DAMPING_RATIO = Ball.damper(b);
+        const mtd = delta.multiply((a.radius + b.radius - d) / d);
 
-        a.vel.negate().multiply(A_DAMPING_RATIO).add(new Vector(A_RATIO, A_RATIO).multiply(B_RATIO).negate());
-        b.vel.negate().multiply(B_DAMPING_RATIO).add(new Vector(B_RATIO, B_RATIO).multiply(A_RATIO).negate());
+        const im1 = 1 / a.mass;
+        const im2 = 1 / b.mass;
+
+        a.pos.add(mtd.multiply(im1 / (im1 + im2)));
+        b.pos.subtract(mtd.multiply(im2 / (im1 + im2)));
+
+        const v = a.vel.subtract(b.vel);
+
+        const vn = v.dot(mtd.clone().normalized);
+
+        if (vn > 0) return;
+
+        const i = (-(1 + RESTITUTION) * vn) / (im1 + im2);
+
+        const impulse = mtd.clone().normalized.multiply(i);
+
+        a.vel.add(impulse.multiply(im1));
+        b.vel.subtract(impulse.multiply(im2));
     }
 
     public static damper(ball: Ball) {
@@ -99,12 +115,14 @@ class Ball {
     }
 }
 
-const balls = [new Ball({ x: canvas.width / 2, y: canvas.height / 2, r: RADIUS, m: 2 })];
+const balls: Ball[] = [];
 
 let Δ = 0;
 let Ω = 0;
 
 function update(γ: number) {
+    if (isPaused) return;
+
     const θ = γ / 1000;
 
     Δ = θ - Ω;
@@ -112,6 +130,13 @@ function update(γ: number) {
     Ω = θ;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (mouse.isDown) {
+        ctx.moveTo(mouse.ox, mouse.oy);
+        ctx.lineTo(mouse.x, mouse.y);
+
+        ctx.stroke();
+    }
 
     balls.forEach((ball) => ball.update(Δ));
 
@@ -125,11 +150,11 @@ function update(γ: number) {
             if (d < a.radius + b.radius) Ball.resolve(a, b);
         });
     });
-
-    requestAnimationFrame(update);
 }
 
-requestAnimationFrame(update);
+let isPaused = false;
+
+setInterval(() => update(Date.now() - EPOCH), 1000 / 60);
 
 const mouse = {
     x: 0,
@@ -162,14 +187,26 @@ window.addEventListener("mouseup", () => {
         x: isClick ? mouse.x : mouse.ox,
         y: isClick ? mouse.y : mouse.oy,
         m: Math.ceil((Date.now() - mouse.lastHeld) / 1000),
-        r: RADIUS + Math.floor(Math.random()),
+        r: RADIUS + Math.floor(Math.random() * 10 - 5),
     });
 
-    const force = new Vector(mouse.ox - mouse.x, mouse.oy - mouse.y).divide(10);
+    if (isClick) {
+        ball.vel.add(new Vector((Math.random() - 0.5) * 5, 0));
+    } else {
+        const force = new Vector(mouse.ox - mouse.x, mouse.oy - mouse.y).divide(10);
 
-    ball.vel.add(force);
+        ball.vel.add(force);
+    }
 
     balls.push(ball);
+});
+
+window.addEventListener("blur", () => {
+    isPaused = true;
+});
+
+window.addEventListener("focus", () => {
+    isPaused = false;
 });
 
 function getObjectFitSize(contains: boolean, containerWidth: number, containerHeight: number, width: number, height: number) {
